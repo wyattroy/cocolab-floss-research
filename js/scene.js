@@ -649,15 +649,41 @@ export function initScene(data, { onSelect } = {}) {
   window.addEventListener('resize', onResize);
 
   // Stop burning frames when the hero is scrolled away or the tab is hidden.
+  //
+  // These two conditions are tracked separately and recombined. Folding them
+  // into one IntersectionObserver callback deadlocks the scene: the observer
+  // only fires again when intersection *changes*, so if the page happened to
+  // be hidden at init, the hero never leaves view and nothing ever re-enables
+  // rendering — the canvas freezes on whatever half-faded frame it reached.
   const hero = document.getElementById('hero');
+  let inView = true;
+  let pageVisible = !document.hidden;
+  const syncRunning = () => { running = inView && pageVisible; };
+
   const io = new IntersectionObserver(
-    ([entry]) => { running = entry.isIntersecting && !document.hidden; },
+    ([entry]) => { inView = entry.isIntersecting; syncRunning(); },
     { threshold: 0.02 }
   );
   io.observe(hero);
+
   document.addEventListener('visibilitychange', () => {
-    running = !document.hidden && hero.getBoundingClientRect().bottom > 0;
+    pageVisible = !document.hidden;
+    syncRunning();
   });
+
+  // Any sign of a live user is proof the page is visible, whatever the
+  // visibility API reported earlier. This is the escape hatch that guarantees
+  // the loop can always come back.
+  const wake = () => {
+    if (pageVisible && inView) return;
+    pageVisible = true;
+    inView = hero.getBoundingClientRect().bottom > 0;
+    syncRunning();
+  };
+  window.addEventListener('focus', wake);
+  ['mousemove', 'mousedown', 'wheel', 'touchstart'].forEach((evt) =>
+    canvas.addEventListener(evt, wake, { passive: true })
+  );
 
   frame();
 
