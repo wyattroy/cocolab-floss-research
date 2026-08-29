@@ -254,7 +254,11 @@ function openPanel(id) {
     </div>`;
 
   panel.hidden = false;
-  requestAnimationFrame(() => panel.classList.add('is-open'));
+  // Force a reflow so the browser has a start value for the slide-in transform.
+  // Deferring this to requestAnimationFrame instead ties the panel's opening to
+  // the frame rate, and it visibly lags on a throttled or slow device.
+  void panel.offsetWidth;
+  panel.classList.add('is-open');
   body.scrollTop = 0;
 
   const idx = ORDER.indexOf(id);
