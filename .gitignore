@@ -1,0 +1,6 @@
+# The plaintext research never goes to GitHub — only data/insights.enc.json does.
+# Keep a backup of this file somewhere safe; it is the only editable source.
+src/insights.json
+
+.DS_Store
+node_modules/

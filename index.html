@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Cocolab — Floss Pick User Research</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦷</text></svg>">
+</head>
+<body class="locked">
+
+<!-- ─────────────────────────────  GATE  ───────────────────────────── -->
+<div id="gate">
+  <div class="gate-inner">
+    <p class="gate-eyebrow">Cocolab &middot; Confidential</p>
+    <h1 class="gate-title">Floss Pick<br>User Research</h1>
+    <p class="gate-sub">Midpoint round &middot; July 2026 &middot; Three interviews, twenty&#8209;one takeaways.</p>
+    <form id="gate-form" autocomplete="off">
+      <label class="visually-hidden" for="gate-input">Password</label>
+      <div class="gate-field">
+        <input type="password" id="gate-input" placeholder="Password" autocomplete="current-password" spellcheck="false" required>
+        <button type="submit" id="gate-submit" aria-label="Unlock">→</button>
+      </div>
+      <p class="gate-status" id="gate-status" role="status" aria-live="polite"></p>
+    </form>
+    <p class="gate-foot">Prepared by Wyatt Roy. Contents are encrypted at rest — the password is the decryption key.</p>
+  </div>
+</div>
+
+<!-- ─────────────────────────────  APP  ───────────────────────────── -->
+<div id="app" hidden>
+
+  <nav id="nav">
+    <span class="nav-logo">Cocolab <span class="nav-sep">/</span> Floss Pick Research</span>
+    <div class="nav-right">
+      <span class="nav-meta" id="nav-meta"></span>
+      <button class="nav-btn" id="btn-reset" title="Reset the view">Reset view</button>
+      <a class="nav-btn" href="#report">Read report ↓</a>
+    </div>
+  </nav>
+
+  <!-- 3D graph -->
+  <section id="hero" aria-label="Interactive 3D map of research insights">
+    <canvas id="three-canvas"></canvas>
+    <div id="scatter-2d" hidden aria-label="2D map of research insights"></div>
+
+    <div id="axis-labels" aria-hidden="true">
+      <span class="axis-label" id="label-hand">In the Hand</span>
+      <span class="axis-label" id="label-world">In the World</span>
+      <span class="axis-label" id="label-function">Function</span>
+      <span class="axis-label" id="label-feeling">Feeling</span>
+      <span class="axis-label axis-helper" id="label-evidence">evidence &rarr;</span>
+    </div>
+
+    <div id="hover-label" role="tooltip" hidden></div>
+
+    <div id="hero-intro">
+      <p class="hero-eyebrow" id="hero-eyebrow"></p>
+      <h1 class="hero-headline" id="hero-headline"></h1>
+      <p class="hero-standfirst" id="hero-standfirst"></p>
+    </div>
+
+    <div id="legend" role="group" aria-label="Filter insights by quadrant">
+      <button class="legend-chip is-active" data-q="all">All <span class="legend-count">21</span></button>
+    </div>
+
+    <div id="hero-controls">
+      <label class="ev-filter">
+        <span class="ev-filter-label">Evidence floor</span>
+        <input type="range" id="ev-slider" min="0" max="100" value="0" step="1" aria-label="Hide insights below this evidence level">
+        <span class="ev-filter-val" id="ev-val">show all</span>
+      </label>
+      <p class="hero-hint" id="hero-hint">Drag to orbit &middot; scroll to zoom &middot; click a card</p>
+    </div>
+  </section>
+
+  <!-- Detail panel -->
+  <aside id="panel" aria-label="Insight detail" hidden>
+    <button id="panel-close" aria-label="Close">×</button>
+    <div id="panel-body"></div>
+    <div id="panel-nav">
+      <button id="panel-prev">← Prev</button>
+      <span id="panel-pos"></span>
+      <button id="panel-next">Next →</button>
+    </div>
+  </aside>
+
+  <!-- Written report -->
+  <main id="report">
+    <section class="report-lede">
+      <p class="report-eyebrow">How to read this</p>
+      <div class="axis-explainers" id="axis-explainers"></div>
+    </section>
+
+    <section id="quadrant-sections"></section>
+
+    <section class="report-method">
+      <h2>Method &amp; caveats</h2>
+      <div class="method-grid">
+        <div>
+          <h3>What this is</h3>
+          <p>Three 30-minute remote interviews conducted in July 2026, each following the same discussion guide: current routine, hands-on review of competitor picks sent in advance, then pricing. Participants were sent Grin, Dentek, Oral-B, Plackers and Radius picks to handle on camera.</p>
+        </div>
+        <div>
+          <h3>Who we spoke to</h3>
+          <p><strong>Ashley</strong> — parent of two, does ~70% of purchasing at Costco, tries most products via dentist samples. <strong>Amy</strong> — daily pick user, came to picks as a sensory accommodation, eight-month unbroken flossing streak. <strong>Paul</strong> — lapsed pick user, values availability over price, currently uses string floss.</p>
+        </div>
+        <div>
+          <h3>What it is not</h3>
+          <p>Three participants is a directional sample, not a representative one. The depth axis on the map is the honest version of that: findings set back into the distance came from a single voice. Treat those as hypotheses to test, not conclusions to build on.</p>
+        </div>
+        <div>
+          <h3>What to do next</h3>
+          <p>The four strongest findings — thickness as the quality signal, the dry grip, accessibility over price, and the self-standing dispenser — are ready to brief. The accommodation framing and the reusable-handle concept both came from Amy alone and are the two highest-value things to screen for in the next round.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer id="report-foot">
+      <p>Cocolab &middot; Floss Pick User Research &middot; Midpoint round, July 2026</p>
+      <p class="foot-dim">Prepared by Wyatt Roy. Confidential — please do not redistribute.</p>
+    </footer>
+  </main>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
