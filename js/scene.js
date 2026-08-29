@@ -648,41 +648,22 @@ export function initScene(data, { onSelect } = {}) {
   }
   window.addEventListener('resize', onResize);
 
-  // Stop burning frames when the hero is scrolled away or the tab is hidden.
-  //
-  // These two conditions are tracked separately and recombined. Folding them
-  // into one IntersectionObserver callback deadlocks the scene: the observer
-  // only fires again when intersection *changes*, so if the page happened to
-  // be hidden at init, the hero never leaves view and nothing ever re-enables
-  // rendering — the canvas freezes on whatever half-faded frame it reached.
+  // The only pause worth owning is "the hero has been scrolled past". Browsers
+  // already throttle requestAnimationFrame to nothing in a background tab, so
+  // gating on document.hidden buys no work saved — and it costs correctness:
+  // any context that reports itself hidden while still painting (an embedded
+  // view, an automated tab) freezes the scene on a half-faded frame with no
+  // event guaranteed to bring it back.
   const hero = document.getElementById('hero');
-  let inView = true;
-  let pageVisible = !document.hidden;
-  const syncRunning = () => { running = inView && pageVisible; };
 
-  const io = new IntersectionObserver(
-    ([entry]) => { inView = entry.isIntersecting; syncRunning(); },
-    { threshold: 0.02 }
-  );
-  io.observe(hero);
+  function updateRunning() {
+    running = hero.getBoundingClientRect().bottom > 0;
+  }
 
-  document.addEventListener('visibilitychange', () => {
-    pageVisible = !document.hidden;
-    syncRunning();
-  });
-
-  // Any sign of a live user is proof the page is visible, whatever the
-  // visibility API reported earlier. This is the escape hatch that guarantees
-  // the loop can always come back.
-  const wake = () => {
-    if (pageVisible && inView) return;
-    pageVisible = true;
-    inView = hero.getBoundingClientRect().bottom > 0;
-    syncRunning();
-  };
-  window.addEventListener('focus', wake);
+  window.addEventListener('scroll', updateRunning, { passive: true });
+  window.addEventListener('focus', updateRunning);
   ['mousemove', 'mousedown', 'wheel', 'touchstart'].forEach((evt) =>
-    canvas.addEventListener(evt, wake, { passive: true })
+    canvas.addEventListener(evt, updateRunning, { passive: true })
   );
 
   frame();
@@ -702,7 +683,8 @@ export function initScene(data, { onSelect } = {}) {
     reset() { resetView(); hasInteracted = false; },
     dispose() {
       cancelAnimationFrame(rafId);
-      io.disconnect();
+      window.removeEventListener('scroll', updateRunning);
+      window.removeEventListener('focus', updateRunning);
       window.removeEventListener('resize', onResize);
       renderer.dispose();
     },
