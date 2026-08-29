@@ -51,7 +51,17 @@ const SCALE_STIFFNESS = 0.22;
 const SCALE_DAMPING = 0.55;
 
 const DIM_OPACITY = 0.12;   // filtered-out tiles stay as ghosts for context
-const FADE_LERP = 0.14;
+const FADE_LERP = 0.14;     // per 60fps frame — see frameRateAdjusted()
+
+// A plain `x += (target - x) * k` per frame is frame-rate dependent: the
+// result is k applied once per *frame*, not per unit of time. At 60fps a tile
+// fades in over ~0.4s; in a throttled tab running a few frames per second the
+// same code settles at half opacity and stays there, because the frames it
+// needed never arrive. Converting the rate to the elapsed time makes the
+// motion identical at 8fps and 144fps.
+function frameRateAdjusted(k, dtMs) {
+  return 1 - Math.pow(1 - k, dtMs / 16.67);
+}
 
 const ENTRY_STAGGER_MS = 45;
 const ENTRY_FADE_MS = 520;
@@ -569,9 +579,17 @@ export function initScene(data, { onSelect } = {}) {
   let rafId = null;
   let running = true;
 
+  let lastFrameTs = performance.now();
+
   function frame() {
     rafId = requestAnimationFrame(frame);
     if (!running) return;
+
+    const now = performance.now();
+    // Cap dt so returning to a backgrounded tab eases in rather than snapping.
+    const dt = Math.min(now - lastFrameTs, 100);
+    lastFrameTs = now;
+    const fade = frameRateAdjusted(FADE_LERP, dt);
 
     tickSpring(zoom, ZOOM_STIFFNESS, ZOOM_DAMPING);
     tickSpring(theta, DRAG_STIFFNESS, DRAG_DAMPING);
@@ -593,7 +611,7 @@ export function initScene(data, { onSelect } = {}) {
 
       const entry = clamp((elapsed - u.revealAt) / ENTRY_FADE_MS, 0, 1);
       const wanted = u.targetOpacity * entry;
-      u.opacity += (wanted - u.opacity) * FADE_LERP;
+      u.opacity += (wanted - u.opacity) * fade;
       const o = u.opacity;
       u.face.opacity = o;
       u.edge.opacity = o;
@@ -625,7 +643,7 @@ export function initScene(data, { onSelect } = {}) {
       const b = project(new THREE.Vector3(R * 1.04, -R * 1.04, Z_PROVEN));
       const offAxis = Math.abs(theta.current) + Math.abs(phi.current);
       const want = !a.behind && !b.behind && offAxis > EVIDENCE_LABEL_ANGLE ? 1 : 0;
-      evidenceLabelOpacity += (want - evidenceLabelOpacity) * 0.09;
+      evidenceLabelOpacity += (want - evidenceLabelOpacity) * frameRateAdjusted(0.09, dt);
       evEl.style.opacity = evidenceLabelOpacity;
       if (evidenceLabelOpacity > 0.01) {
         const deg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
