@@ -114,9 +114,20 @@ const TITLE_LINE_RATIO = 1.2;
 const TITLE_MAX_PX = 140;
 const TITLE_MIN_PX = 44;
 
+// Participant avatars sit along the bottom edge. Three fixed slots, always in
+// the same order, so a given face is always in the same place — that is what
+// lets you read *who* at a glance rather than counting. A person who did not
+// raise the insight leaves an empty ring, so the card still reads as "one of
+// three" as well as "which one".
+const AVATAR_D = 86;
+const AVATAR_PITCH = 96;
+const AVATAR_RESERVE = AVATAR_D + 16;
+
 const TITLE_W = FACE_W - PAD_X * 2;
 const TITLE_TOP = PAD_TOP + META_H + META_GAP;
-const TITLE_H = FACE_H - TITLE_TOP - PAD_BOTTOM;
+// The reserve comes out of slack that was already going unused at the bottom
+// of the card, so adding the faces costs nothing in type size.
+const TITLE_H = FACE_H - TITLE_TOP - PAD_BOTTOM - AVATAR_RESERVE;
 
 const titleFont = (px) => `400 ${px}px "Source Serif 4", Georgia, serif`;
 
@@ -164,7 +175,50 @@ function fitTitleFontSize(insights) {
   return TITLE_MIN_PX;
 }
 
-function makeFaceTexture(insight, quadrant, titlePx) {
+// Draw the participant row along the bottom edge of a card face.
+function drawAvatars(ctx, insight, quadrant, avatars, order) {
+  const said = new Set(insight.voices);
+  const r = AVATAR_D / 2;
+  const cy = FACE_H - PAD_BOTTOM - r;
+
+  order.forEach((who, i) => {
+    // Right-aligned as a block, but each person keeps a fixed slot within it.
+    const cx = FACE_W - PAD_X - r - (order.length - 1 - i) * AVATAR_PITCH;
+
+    if (!said.has(who)) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 2, 0, Math.PI * 2);
+      ctx.strokeStyle = '#E2E1DC';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      return;
+    }
+
+    const img = avatars && avatars[who];
+    if (img) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, cx - r, cy - r, AVATAR_D, AVATAR_D);
+      ctx.restore();
+    } else {
+      // No portrait available — keep the count legible with a solid disc.
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = quadrant.color;
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = quadrant.color;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  });
+}
+
+function makeFaceTexture(insight, quadrant, titlePx, avatars, order) {
   const cv = document.createElement('canvas');
   cv.width = FACE_W;
   cv.height = FACE_H;
@@ -183,16 +237,6 @@ function makeFaceTexture(insight, quadrant, titlePx) {
   ctx.font = '500 44px "DM Mono", ui-monospace, monospace';
   ctx.fillText(String(insight.n).padStart(2, '0'), PAD_X, PAD_TOP);
 
-  // Evidence pips, top right — one per participant who raised it
-  const pips = 3;
-  const filled = insight.voices.length;
-  for (let i = 0; i < pips; i++) {
-    ctx.beginPath();
-    ctx.arc(FACE_W - PAD_X - i * 36, PAD_TOP + 20, 10, 0, Math.PI * 2);
-    ctx.fillStyle = i < filled ? quadrant.color : '#E2E1DC';
-    ctx.fill();
-  }
-
   // Title — one shared size across every card (see fitTitleFontSize)
   ctx.fillStyle = '#1A1A18';
   ctx.font = titleFont(titlePx);
@@ -202,6 +246,8 @@ function makeFaceTexture(insight, quadrant, titlePx) {
     ctx.fillText(line, PAD_X, y);
     y += lineH;
   }
+
+  drawAvatars(ctx, insight, quadrant, avatars, order);
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -316,7 +362,7 @@ function addScaffold(scene, quadrants) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-export function initScene(data, { onSelect } = {}) {
+export function initScene(data, { onSelect, avatars } = {}) {
   const canvas = document.getElementById('three-canvas');
   const hoverEl = document.getElementById('hover-label');
   const isTouch = window.matchMedia('(hover: none)').matches;
@@ -352,6 +398,7 @@ export function initScene(data, { onSelect } = {}) {
 
   // One type size for the whole set, fixed by whichever title is longest.
   const titlePx = fitTitleFontSize(data.insights);
+  const avatarOrder = data.meta?.avatarOrder || Object.keys(data.meta?.avatars || {});
 
   // Nearest-first so the staggered entry reads as depth resolving out of the page.
   const ordered = [...data.insights].sort((a, b) => b.axes.evidence - a.axes.evidence);
@@ -365,7 +412,7 @@ export function initScene(data, { onSelect } = {}) {
     const geo = new THREE.BoxGeometry(TILE_W, TILE_H, TILE_D);
     const edge = new THREE.MeshBasicMaterial({ color: q.color, transparent: true, opacity: 0 });
     const face = new THREE.MeshBasicMaterial({
-      map: makeFaceTexture(insight, q, titlePx),
+      map: makeFaceTexture(insight, q, titlePx, avatars, avatarOrder),
       transparent: true,
       opacity: 0,
     });

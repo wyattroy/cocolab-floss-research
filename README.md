@@ -1,8 +1,12 @@
-# Cocolab — Floss Pick User Research
+# Floss Pick User Research
 
-An interactive 2×2×2 map of the July 2026 midpoint user-interview round, built for
-Cocolab. Password-protected, static, hosted on GitHub Pages. Vanilla JS — no build
+An interactive 2×2×2 map of a July 2026 midpoint user-interview round, built for a
+client. Password-protected, static, hosted on GitHub Pages. Vanilla JS — no build
 step, no framework, three files of source.
+
+The client's name, the research, and the participants' portraits all live inside
+the encrypted payload, so none of them appear in this repository or on the page
+before someone enters the password.
 
 The visual language is lifted from the 3D project graph on
 [wyattroy.com](https://wyattroy.com): same warm white ground, same spring-driven

@@ -11,7 +11,7 @@
  */
 
 const PAYLOAD_URL = 'data/insights.enc.json';
-const SESSION_KEY = 'cocolab-research-unlocked';
+const SESSION_KEY = 'research-unlocked';
 
 const b64ToBytes = (b64) =>
   Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));

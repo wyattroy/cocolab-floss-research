@@ -19,12 +19,44 @@ const $ = (id) => document.getElementById(id);
 const byId = (id) => DATA.insights.find((i) => i.id === id);
 
 // ─── Hero copy ────────────────────────────────────────────────────────────────
+// Portraits ship inside the encrypted payload as data URIs, so they are only
+// available to someone who has the password — these are research participants'
+// faces, and the repository itself is public.
+async function loadAvatars(meta) {
+  if (!meta || !meta.avatars) return null;
+  // Load via onload rather than decode(): decode() can sit unresolved in some
+  // environments, and this runs before the scene is built, so a hang here would
+  // leave an unlocked page with nothing on it. Each portrait also gets its own
+  // timeout — a missing face costs a solid disc, never the whole map.
+  const pairs = await Promise.all(
+    Object.entries(meta.avatars).map(async ([who, src]) => {
+      const img = new Image();
+      const settled = new Promise((resolve) => {
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+      });
+      img.src = src;
+      const ok = await Promise.race([
+        settled,
+        new Promise((resolve) => setTimeout(() => resolve(false), 3000)),
+      ]);
+      return ok ? [who, img] : null;
+    })
+  );
+  return Object.fromEntries(pairs.filter(Boolean));
+}
+
 function renderHero() {
   const m = DATA.meta;
   $('hero-eyebrow').textContent = `${m.round} · n=${m.n}`;
   $('hero-headline').textContent = m.headline;
   $('hero-standfirst').textContent = m.standfirst;
   $('nav-meta').textContent = `${DATA.insights.length} insights · ${m.n} participants`;
+  // The client's name lives only in the encrypted payload, so it appears in the
+  // markup and the tab title only once someone has actually unlocked the page.
+  $('nav-logo').innerHTML =
+    `${m.client} <span class="nav-sep">/</span> Floss Pick Research`;
+  $('foot-line').textContent = `${m.client} · ${m.project} · ${m.round}`;
   document.title = `${m.client} — ${m.project}`;
 }
 
@@ -328,8 +360,10 @@ async function boot(data) {
     // font actually resolves — the same one used to draw — so nothing overflows.
   }
 
+  const avatars = await loadAvatars(DATA.meta);
+
   VIZ = hasWebGL()
-    ? initScene(DATA, { onSelect: openPanel })
+    ? initScene(DATA, { onSelect: openPanel, avatars })
     : initScatter2D(DATA, { onSelect: openPanel });
 
   if (!hasWebGL()) {
