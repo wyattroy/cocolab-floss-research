@@ -1,4 +1,4 @@
-# Floss Pick User Research
+# Floss Research
 
 An interactive 2×2×2 map of a July 2026 midpoint user-interview round, built for a
 client. Password-protected, static, hosted on GitHub Pages. Vanilla JS — no build

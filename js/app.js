@@ -55,7 +55,7 @@ function renderHero() {
   // The client's name lives only in the encrypted payload, so it appears in the
   // markup and the tab title only once someone has actually unlocked the page.
   $('nav-logo').innerHTML =
-    `${m.client} <span class="nav-sep">/</span> Floss Pick Research`;
+    `${m.client} <span class="nav-sep">/</span> ${m.projectShort || m.project}`;
   $('foot-line').textContent = `${m.client} · ${m.project} · ${m.round}`;
   document.title = `${m.client} — ${m.project}`;
 }
@@ -161,6 +161,17 @@ function renderAxisExplainers() {
           .map((p) => `<p>${p}</p>`)
           .join('')}</div>`
     )
+    .join('');
+}
+
+// The method notes name participants and competitors, so they are part of the
+// research rather than page furniture — they render from the decrypted payload
+// rather than sitting in the markup where anyone could read them.
+function renderMethod() {
+  const host = $('method-grid');
+  if (!host || !DATA.meta.method) return;
+  host.innerHTML = DATA.meta.method
+    .map((b) => `<div><h3>${escapeHtml(b.h)}</h3><p>${b.body}</p></div>`)
     .join('');
 }
 
@@ -337,6 +348,7 @@ async function boot(data) {
 
   renderHero();
   renderAxisExplainers();
+  renderMethod();
   renderReport();
 
   // Card faces are drawn into a 2D canvas, so their type is measured with
