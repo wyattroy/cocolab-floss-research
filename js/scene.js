@@ -562,13 +562,13 @@ export function initScene(data, { onSelect } = {}) {
 
   // ─── Public API state ───────────────────────────────────────────────────────
   let activeQuadrant = 'all';
-  let evidenceFloor = 0;
+  let voiceFloor = 1;
 
   function applyVisibility() {
     tiles.forEach((mesh) => {
       const { insight, quadrant } = mesh.userData;
       const passesQuadrant = activeQuadrant === 'all' || quadrant.id === activeQuadrant;
-      const passesEvidence = insight.axes.evidence >= evidenceFloor;
+      const passesEvidence = insight.voices.length >= voiceFloor;
       const on = passesQuadrant && passesEvidence;
       mesh.userData.visible = on;
       mesh.userData.targetOpacity = on ? 1 : DIM_OPACITY;
@@ -695,7 +695,7 @@ export function initScene(data, { onSelect } = {}) {
 
   return {
     setQuadrant(id) { activeQuadrant = id; applyVisibility(); },
-    setEvidenceFloor(v) { evidenceFloor = v; applyVisibility(); },
+    setVoiceFloor(n) { voiceFloor = n; applyVisibility(); },
     select(id) {
       selected = tiles.find((t) => t.userData.insight.id === id) || null;
       if (selected) {
@@ -762,7 +762,7 @@ export function initScatter2D(data, { onSelect } = {}) {
         node.style.opacity = id === 'all' || q.id === id ? 1 : 0.15;
       });
     },
-    setEvidenceFloor() {},
+    setVoiceFloor() {},
     select() {},
     clearSelection() {},
     reset() {},

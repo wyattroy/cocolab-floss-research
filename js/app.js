@@ -13,7 +13,7 @@ let DATA = null;
 let VIZ = null;
 let ORDER = [];          // insight ids in report order — drives panel prev/next
 let activeQuadrant = 'all';
-let evidenceFloor = 0;
+let voiceFloor = 1;   // minimum participants who said it: 1 = show all
 
 const $ = (id) => document.getElementById(id);
 const byId = (id) => DATA.insights.find((i) => i.id === id);
@@ -33,7 +33,7 @@ function countFor(qid) {
   return DATA.insights.filter(
     (i) =>
       (qid === 'all' || quadrantOf(i, DATA.quadrants).id === qid) &&
-      i.axes.evidence >= evidenceFloor
+      i.voices.length >= voiceFloor
   ).length;
 }
 
@@ -70,21 +70,21 @@ function setQuadrant(id) {
 }
 
 // ─── Evidence floor ───────────────────────────────────────────────────────────
-function evidenceFloorLabel(v) {
-  if (v <= 0.01) return 'show all';
-  if (v <= 0.45) return '≥ single voice';
-  if (v <= 0.65) return '≥ two voices';
-  if (v <= 0.85) return '≥ strong';
-  return 'strongest only';
-}
+// The slider culls by how many participants actually said a thing, which is a
+// claim the reader can check against the quotes. It deliberately does NOT use
+// axes.evidence: that score also carries how strongly a finding was held, so
+// the 1-, 2- and 3-voice score ranges overlap (a 1-voice finding reaches 0.70,
+// a 2-voice one starts at 0.68) and no threshold on it could honestly be
+// labelled "2 voices". Depth in the 3D view still shows the finer score.
+const VOICE_FLOOR_LABELS = { 1: 'show all', 2: '≥ 2 voices', 3: 'all 3 voices' };
 
 function initEvidenceSlider() {
   const slider = $('ev-slider');
   const out = $('ev-val');
   slider.addEventListener('input', () => {
-    evidenceFloor = Number(slider.value) / 100;
-    out.textContent = evidenceFloorLabel(evidenceFloor);
-    VIZ.setEvidenceFloor(evidenceFloor);
+    voiceFloor = Number(slider.value);
+    out.textContent = VOICE_FLOOR_LABELS[voiceFloor];
+    VIZ.setVoiceFloor(voiceFloor);
     updateLegendCounts();
     applyReportFilter();
   });
@@ -186,7 +186,7 @@ function applyReportFilter() {
     s.hidden = activeQuadrant !== 'all' && s.dataset.q !== activeQuadrant;
   });
   document.querySelectorAll('.card').forEach((c) => {
-    c.hidden = byId(c.dataset.id).axes.evidence < evidenceFloor;
+    c.hidden = byId(c.dataset.id).voices.length < voiceFloor;
   });
 }
 
@@ -326,10 +326,10 @@ function boot(data) {
     VIZ.reset();
     $('hero-intro').classList.remove('is-faded');
     setQuadrant('all');
-    $('ev-slider').value = 0;
-    evidenceFloor = 0;
-    $('ev-val').textContent = 'show all';
-    VIZ.setEvidenceFloor(0);
+    $('ev-slider').value = 1;
+    voiceFloor = 1;
+    $('ev-val').textContent = VOICE_FLOOR_LABELS[1];
+    VIZ.setVoiceFloor(1);
     updateLegendCounts();
     applyReportFilter();
   });
