@@ -75,7 +75,7 @@ function setQuadrant(id) {
 // axes.evidence: that score also carries how strongly a finding was held, so
 // the 1-, 2- and 3-voice score ranges overlap (a 1-voice finding reaches 0.70,
 // a 2-voice one starts at 0.68) and no threshold on it could honestly be
-// labelled "2 voices". Depth in the 3D view still shows the finer score.
+// labeled "2 voices". Depth in the 3D view still shows the finer score.
 const VOICE_FLOOR_LABELS = { 1: 'show all', 2: '≥ 2 voices', 3: 'all 3 voices' };
 
 function initEvidenceSlider() {
@@ -110,7 +110,7 @@ function renderAxisExplainers() {
       ],
     },
     {
-      h: 'Depth — how good is the evidence',
+      h: 'Depth — how many people raised it',
       body: [a.z.blurb],
     },
     {
@@ -244,7 +244,7 @@ function openPanel(id) {
     </div>
 
     <div class="p-section p-sowhat">
-      <p class="p-label">So what</p>
+      <p class="p-label">Worth discussing</p>
       <p class="p-body">${escapeHtml(i.soWhat)}</p>
     </div>
 

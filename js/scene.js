@@ -103,7 +103,7 @@ const FACE_W = 1024;
 const FACE_H = Math.round(FACE_W * (TILE_H / TILE_W));
 
 // Face layout, in texture pixels.
-const BAR_W = 18;            // quadrant colour spine down the left edge
+const BAR_W = 18;            // quadrant color spine down the left edge
 const PAD_X = 54;
 const PAD_TOP = 42;
 const META_H = 50;           // the number / evidence-pip row
@@ -557,7 +557,7 @@ export function initScene(data, { onSelect } = {}) {
     };
   }
 
-  // Pin a label to the viewport edge along the ray from centre to its axis tip,
+  // Pin a label to the viewport edge along the ray from center to its axis tip,
   // so endpoint labels stay on screen at every zoom level.
   function pinToEdge(ox, oy, tx, ty, m) {
     const w = canvas.offsetWidth;
