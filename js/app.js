@@ -299,13 +299,34 @@ function initPanel() {
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-function boot(data) {
+async function boot(data) {
   DATA = data;
   $('app').hidden = false;
 
   renderHero();
   renderAxisExplainers();
   renderReport();
+
+  // Card faces are drawn into a 2D canvas, so their type is measured with
+  // whatever font is available at that instant. Building them before the
+  // webfonts land would fit every title against the Georgia fallback and bake
+  // the wrong size into the textures. Wait for the fonts — but never
+  // indefinitely, because one that fails to load must not cost us the map.
+  // `document.fonts.ready` alone is not enough: a webfont is only fetched when
+  // something needs it, and canvas measureText does not count as needing it.
+  // Ask for these two faces explicitly, then wait for the set to settle.
+  try {
+    await Promise.race([
+      Promise.all([
+        document.fonts.load('400 100px "Source Serif 4"'),
+        document.fonts.load('500 34px "DM Mono"'),
+      ]).then(() => document.fonts.ready),
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]);
+  } catch {
+    // Fonts are a nicety. If they fail, the fit is still measured with whatever
+    // font actually resolves — the same one used to draw — so nothing overflows.
+  }
 
   VIZ = hasWebGL()
     ? initScene(DATA, { onSelect: openPanel })

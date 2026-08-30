@@ -102,34 +102,69 @@ export function evidenceLabel(insight) {
 const FACE_W = 1024;
 const FACE_H = Math.round(FACE_W * (TILE_H / TILE_W));
 
-function wrapLines(ctx, text, maxWidth, maxLines) {
+// Face layout, in texture pixels.
+const BAR_W = 18;            // quadrant colour spine down the left edge
+const PAD_X = 54;
+const PAD_TOP = 42;
+const META_H = 50;           // the number / evidence-pip row
+const META_GAP = 24;
+const PAD_BOTTOM = 34;
+
+const TITLE_LINE_RATIO = 1.2;
+const TITLE_MAX_PX = 140;
+const TITLE_MIN_PX = 44;
+
+const TITLE_W = FACE_W - PAD_X * 2;
+const TITLE_TOP = PAD_TOP + META_H + META_GAP;
+const TITLE_H = FACE_H - TITLE_TOP - PAD_BOTTOM;
+
+const titleFont = (px) => `400 ${px}px "Source Serif 4", Georgia, serif`;
+
+// Wrap to however many lines the text needs; the caller decides if that is too many.
+function wrapLines(ctx, text, maxWidth) {
   const words = text.split(/\s+/);
   const lines = [];
   let line = '';
   for (const word of words) {
     const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
+    if (line && ctx.measureText(test).width > maxWidth) {
       lines.push(line);
       line = word;
-      if (lines.length === maxLines - 1) break;
     } else {
       line = test;
     }
   }
-  if (line && lines.length < maxLines) lines.push(line);
-  // If we ran out of lines mid-sentence, mark the truncation honestly.
-  const used = lines.join(' ').split(/\s+/).length;
-  if (used < words.length && lines.length) {
-    let last = lines[lines.length - 1];
-    while (ctx.measureText(`${last}…`).width > maxWidth && last.includes(' ')) {
-      last = last.slice(0, last.lastIndexOf(' '));
-    }
-    lines[lines.length - 1] = `${last}…`;
-  }
+  if (line) lines.push(line);
   return lines;
 }
 
-function makeFaceTexture(insight, quadrant) {
+/**
+ * The largest type size at which *every* title still fits inside its card.
+ *
+ * One shared size matters more here than fitting each card individually.
+ * Cards sit side by side in the same view, so type that changes size between
+ * them reads as a hierarchy that does not exist — the longest insight would
+ * look like the least important one. The longest title therefore sets the
+ * size and every other card follows it.
+ *
+ * The fit is measured against the real font rather than estimated from
+ * character counts, and derived from the data at run time, so editing the
+ * research can never silently push a title over the edge of its card.
+ */
+function fitTitleFontSize(insights) {
+  const ctx = document.createElement('canvas').getContext('2d');
+  for (let px = TITLE_MAX_PX; px >= TITLE_MIN_PX; px -= 1) {
+    ctx.font = titleFont(px);
+    const maxLines = Math.floor(TITLE_H / (px * TITLE_LINE_RATIO));
+    if (maxLines < 1) continue;
+    if (insights.every((i) => wrapLines(ctx, i.title, TITLE_W).length <= maxLines)) {
+      return px;
+    }
+  }
+  return TITLE_MIN_PX;
+}
+
+function makeFaceTexture(insight, quadrant, titlePx) {
   const cv = document.createElement('canvas');
   cv.width = FACE_W;
   cv.height = FACE_H;
@@ -138,37 +173,33 @@ function makeFaceTexture(insight, quadrant) {
   ctx.fillStyle = '#FCFCFB';
   ctx.fillRect(0, 0, FACE_W, FACE_H);
 
-  // Quadrant colour bar down the left edge
   ctx.fillStyle = quadrant.color;
-  ctx.fillRect(0, 0, 18, FACE_H);
+  ctx.fillRect(0, 0, BAR_W, FACE_H);
 
-  const padL = 62;
-  const padT = 60;
+  ctx.textBaseline = 'top';
 
   // Number
   ctx.fillStyle = '#A5A29B';
-  ctx.font = '500 34px "DM Mono", ui-monospace, monospace';
-  ctx.textBaseline = 'top';
-  ctx.fillText(String(insight.n).padStart(2, '0'), padL, padT);
+  ctx.font = '500 44px "DM Mono", ui-monospace, monospace';
+  ctx.fillText(String(insight.n).padStart(2, '0'), PAD_X, PAD_TOP);
 
-  // Evidence dots, top right — four pips, filled by strength
+  // Evidence pips, top right — one per participant who raised it
   const pips = 3;
   const filled = insight.voices.length;
   for (let i = 0; i < pips; i++) {
     ctx.beginPath();
-    ctx.arc(FACE_W - 62 - i * 30, padT + 16, 8, 0, Math.PI * 2);
+    ctx.arc(FACE_W - PAD_X - i * 36, PAD_TOP + 20, 10, 0, Math.PI * 2);
     ctx.fillStyle = i < filled ? quadrant.color : '#E2E1DC';
     ctx.fill();
   }
 
-  // Title
+  // Title — one shared size across every card (see fitTitleFontSize)
   ctx.fillStyle = '#1A1A18';
-  ctx.font = '400 60px "Source Serif 4", Georgia, serif';
-  const lines = wrapLines(ctx, insight.title, FACE_W - padL - 62, 4);
-  const lineH = 74;
-  let y = padT + 84;
-  for (const line of lines) {
-    ctx.fillText(line, padL, y);
+  ctx.font = titleFont(titlePx);
+  const lineH = titlePx * TITLE_LINE_RATIO;
+  let y = TITLE_TOP;
+  for (const line of wrapLines(ctx, insight.title, TITLE_W)) {
+    ctx.fillText(line, PAD_X, y);
     y += lineH;
   }
 
@@ -177,7 +208,6 @@ function makeFaceTexture(insight, quadrant) {
   tex.anisotropy = 8;
   return tex;
 }
-
 
 /* A faint tinted panel per quadrant on the back wall, captioned with the
    quadrant's name. Without these the four groups are something you have to be
@@ -320,6 +350,9 @@ export function initScene(data, { onSelect } = {}) {
   const meshToInsight = new Map();
   const startedAt = performance.now();
 
+  // One type size for the whole set, fixed by whichever title is longest.
+  const titlePx = fitTitleFontSize(data.insights);
+
   // Nearest-first so the staggered entry reads as depth resolving out of the page.
   const ordered = [...data.insights].sort((a, b) => b.axes.evidence - a.axes.evidence);
 
@@ -332,7 +365,7 @@ export function initScene(data, { onSelect } = {}) {
     const geo = new THREE.BoxGeometry(TILE_W, TILE_H, TILE_D);
     const edge = new THREE.MeshBasicMaterial({ color: q.color, transparent: true, opacity: 0 });
     const face = new THREE.MeshBasicMaterial({
-      map: makeFaceTexture(insight, q),
+      map: makeFaceTexture(insight, q, titlePx),
       transparent: true,
       opacity: 0,
     });
