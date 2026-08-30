@@ -399,7 +399,14 @@ export function initScene(data, { onSelect } = {}) {
     lastX = x;
     lastY = y;
     moved += Math.abs(dx) + Math.abs(dy);
-    theta.target = clamp(theta.target + dx * DRAG_SPEED, -DRAG_MAX_H, DRAG_MAX_H);
+    // Both axes are direct manipulation: the model follows the finger.
+    // Camera position is (0, 0, dist) rotated by Euler(phi, theta) about the
+    // origin, so a *positive* yaw swings the camera to +x and the model reads
+    // as moving left. Dragging left must therefore increase theta, not
+    // decrease it — hence the negated dx, which now matches the dy convention
+    // one line down. The two used to disagree, which is why horizontal drag
+    // felt inverted while vertical felt right.
+    theta.target = clamp(theta.target - dx * DRAG_SPEED, -DRAG_MAX_H, DRAG_MAX_H);
     phi.target = clamp(phi.target - dy * DRAG_SPEED, -DRAG_MAX_V, DRAG_MAX_V);
   }
   function pointerUp() { dragging = false; }
